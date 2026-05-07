@@ -1,27 +1,47 @@
+from firewall_mcp.configure._php import run_php
 from firewall_mcp.ssh_client import run_command
 
-_SYSCTLS = {
-    "net.inet.tcp.tso": "0",
-    "kern.ipc.maxsockbuf": "4194304",
-    "net.inet.tcp.sendbuf_max": "4194304",
-    "net.inet.tcp.recvbuf_max": "4194304",
+_TUNABLES = [
+    ("net.inet.tcp.tso", "0", "Disable TSO for ZimaBoard"),
+    ("kern.ipc.maxsockbuf", "4194304", "Increase socket buffer"),
+    ("net.inet.tcp.sendbuf_max", "4194304", "Increase TCP send buffer max"),
+    ("net.inet.tcp.recvbuf_max", "4194304", "Increase TCP recv buffer max"),
+]
+
+_TUNABLE_NAMES = [t[0] for t in _TUNABLES]
+
+_PHP = """<?php
+require_once('globals.inc');
+require_once('config.inc');
+require_once('util.inc');
+require_once('system.inc');
+
+$keep = [];
+foreach ($config['sysctl']['item'] ?? [] as $item) {
+    if (!in_array($item['tunable'], """ + str(_TUNABLE_NAMES).replace("'", '"') + """, true)) {
+        $keep[] = $item;
+    }
+}
+$config['sysctl']['item'] = $keep;
+
+$tunables = """ + str([[t[0], t[1], t[2]] for t in _TUNABLES]).replace("'", '"') + """;
+foreach ($tunables as $entry) {
+    $config['sysctl']['item'][] = [
+        'tunable' => $entry[0],
+        'value'   => $entry[1],
+        'descr'   => $entry[2],
+    ];
 }
 
-_LOADER_CONF = "/boot/loader.conf.local"
+write_config('Hardware tuning: TSO disable + socket buffer optimization');
+system_setup_sysctl();
+echo "OK: hardware tuning applied and persisted\\n";
+?>"""
 
 
 def apply_hardware_tuning() -> str:
-    """Disabilita TSO e ottimizza socket buffer. Effetto immediato + persistente al riavvio."""
-    lines = []
-    for key, val in _SYSCTLS.items():
-        lines.append(f"sysctl {key}={val}")
-    for key, val in _SYSCTLS.items():
-        entry = f"{key}={val}"
-        lines.append(
-            f"grep -qF '{entry}' {_LOADER_CONF} 2>/dev/null || echo '{entry}' >> {_LOADER_CONF}"
-        )
-    lines.append("echo 'OK: hardware tuning applied'")
-    return run_command(" && ".join(lines))
+    """Disabilita TSO e ottimizza socket buffer via config pfSense. Persistente al riavvio."""
+    return run_php(_PHP)
 
 
 def verify_tso_disabled() -> bool:
