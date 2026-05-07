@@ -11,6 +11,8 @@ require_once('services.inc');
 $config['dhcpd']['lan']['defaultleasetime'] = '{lease}';
 write_config('Set DHCP default lease to {lease}s');
 services_dhcpd_configure();
+// Forza rigenerazione dhcpd.conf
+mwexec('/usr/local/sbin/dhcpleases -i /var/dhcpd/var/db/dhcpd.leases -p /var/run/dhcpleases.pid -h /var/unbound/dhcpleases_entries.conf 2>/dev/null');
 echo "OK: DHCP lease time set to {lease}s\\n";
 ?>"""
 
@@ -21,7 +23,10 @@ def apply_lease_time(seconds: int = 43200) -> str:
 
 
 def verify_lease_time() -> int:
-    """Legge il default-lease-time attuale da dhcpd.conf. Restituisce i secondi."""
-    output = run_command("grep 'default-lease-time' /var/dhcpd/etc/dhcpd.conf")
-    match = re.search(r"default-lease-time\s+(\d+)", output)
+    """Legge il defaultleasetime da config.xml (fonte canonica). Restituisce i secondi."""
+    output = run_command(
+        "grep -o 'defaultleasetime>[^<]*' /cf/conf/config.xml 2>/dev/null | head -1"
+    )
+    # output è tipo "defaultleasetime>43200"
+    match = re.search(r"defaultleasetime>(\d+)", output)
     return int(match.group(1)) if match else -1

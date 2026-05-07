@@ -14,13 +14,13 @@ def test_apply_lease_time_runs_php():
 
 def test_verify_lease_time_parses_current():
     with patch("firewall_mcp.configure.dhcp.run_command") as mock_run:
-        mock_run.return_value = "default-lease-time 43200;"
+        mock_run.return_value = "defaultleasetime>43200"
         result = verify_lease_time()
     assert result == 43200
 
 
 def test_verify_lease_time_parses_old_value():
     with patch("firewall_mcp.configure.dhcp.run_command") as mock_run:
-        mock_run.return_value = "default-lease-time 7200;"
+        mock_run.return_value = "defaultleasetime>7200"
         result = verify_lease_time()
     assert result == 7200
