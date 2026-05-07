@@ -1,4 +1,5 @@
-# Claude Code local settings (contain credentials)
+# Credentials / local config
+.env
 .claude/settings.json
 .claude/settings.local.json
 
