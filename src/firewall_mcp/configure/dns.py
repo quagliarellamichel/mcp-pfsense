@@ -11,7 +11,8 @@ $config['unbound']['forwarding'] = true;
 $config['system']['dnsserver'] = array('1.1.1.1', '1.0.0.1');
 $config['system']['dnsallowoverride'] = false;
 
-$opts  = "prefetch: yes\\n";
+$opts  = "server:\\n";
+$opts .= "prefetch: yes\\n";
 $opts .= "edns-buffer-size: 1232\\n";
 $opts .= "aggressive-nsec: yes\\n";
 $config['unbound']['custom_options'] = base64_encode($opts);
